@@ -1,4 +1,5 @@
-import {useAddnotesMutation} from "./api/usersapi"
+import {useAddNotesMutation, useGetAllNotesQuery, useDeleteNotesMutation, 
+useGetNotesByIDQuery, useUpdateNotesMutation} from "./api/usersapi"
 import React, { useState } from "react";
 import {
   Grid,
@@ -25,34 +26,74 @@ const Notes = () => {
   const [updateHeading, setUpdateHeading] = useState("");
   const [updateDescription, setUpdateDescription] = useState("");
 
-  const addNoteMutation = useAddnotesMutation();
+  const [addNotes] = useAddNotesMutation();
+  const [updateNotes] = useUpdateNotesMutation();
 
+  const { data: allNotes, refetch: refetchAllNotes } = useGetAllNotesQuery(); 
+
+  console.log("getNotes", allNotes);
+
+  
+  const [deleteNotes] = useDeleteNotesMutation();
+  
   const handleAddNote = async () => {
     if (heading.trim() === "" || description.trim() === "") {
       return;
     }
+  
     const newNote = {
-        id: Date.now(),
-        heading: heading,
-        description: description,
+      id: Date.now(),
+      heading: heading,
+      description: description,
     };
-    const { data } = await addNoteMutation.mutateAsync(newNote);
-
-    setNotesList((prevNotesList) => [...prevNotesList, newNote]);
-
-    setHeading("");
-    setDescription("");
+  
+    try {
+      const response = await addNotes(newNote);
+  
+      if (response) {
+        console.error("Error adding note:", JSON.stringify(response.data));
+        return;
+      }
+      await refetchAllNotes();
+  
+      setNotesList((prevNotesList) => [...prevNotesList, response.data]);
+      setHeading("");
+      setDescription("");
+    } catch (error) {
+      console.error("Error adding note:", error);
+    }
   };
+  
 
-  const handleUpdateNote = (id) => {
-    const noteToUpdate = notesList.find((note) => note.id === id);
+  const handleUpdateNote = async (id) => {
 
+    const noteToUpdate = allNotes.find((note) => note.id === id);
     setUpdateHeading(noteToUpdate.heading);
     setUpdateDescription(noteToUpdate.description);
-
     setUpdateNoteId(id);
-
     setOpenUpdateDialog(true);
+
+    const updatedJSON = {
+      updatedHeading: updateHeading,
+      updatedDescription: updateDescription
+    }
+
+    try {
+      const response = await updateNotes(id, updatedJSON);
+  
+      console.log("resp>>>>>>>", response)
+      if (response) {
+        console.error("Error adding note:", JSON.stringify(response.data));
+        return;
+      }
+      await refetchAllNotes();
+  
+      setNotesList((prevNotesList) => [...prevNotesList, response.data]);
+      setHeading("");
+      setDescription("");
+    } catch (error) {
+      console.error("Error adding note:", error);
+    }
   };
 
   const handleDialogClose = () => {
@@ -63,6 +104,8 @@ const Notes = () => {
   };
 
   const handleUpdateNoteDialog = () => {
+
+
     const updatedNotesList = notesList.map((note) =>
       note.id === updateNoteId
         ? { ...note, heading: updateHeading, description: updateDescription }
@@ -74,10 +117,10 @@ const Notes = () => {
     setOpenUpdateDialog(false);
   };
 
-  const handleDeleteNote = (id) => {
-    const updatedNotesList = notesList.filter((note) => note.id !== id);
+  const handleDeleteNote = async (id) => {
 
-    setNotesList(updatedNotesList);
+    const { data } = await deleteNotes(id);
+
   };
 
   return (
@@ -131,7 +174,7 @@ const Notes = () => {
           Notes List
         </Typography>
         <div>
-          {notesList.map((note) => (
+          {allNotes && allNotes.length > 0 ? ( allNotes.map((note) => (
             <Card key={note.id} sx={{ marginTop: "10px" }}>
               <CardContent>
                 <Typography variant="h6">{note.heading}</Typography>
@@ -156,7 +199,7 @@ const Notes = () => {
                 </Button>
               </CardActions>
             </Card>
-          ))}
+          ))):null}
         </div>
       </Grid>
 

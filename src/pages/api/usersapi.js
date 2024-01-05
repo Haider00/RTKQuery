@@ -2,26 +2,44 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 export const userApi = createApi({
   reducerPath: 'userApi',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api' }), 
+  baseQuery: fetchBaseQuery({ 
+  baseUrl: '/api', 
+  prepareHeaders: (headers, {method})=>{
+  headers.set('Contant-Type', 'application/json');
+  return headers
+  }}),
+
   endpoints: (builder) => ({
-    addnotes: builder.mutation({
+    addNotes: builder.mutation({
       query: (newItems) => ({
-        url: '/notes',
-        method: 'POST',
-        body: newItems,
+          url: 'notes',
+          method: 'POST',
+          body: newItems,
+          responseHandler: (response) => {
+            return response.text()
+          }
       }),
+      onError:  (error)=>{
+        throw error;
+      }
     }),
-    getNotes: builder.query({
+    getNotesByID: builder.query({
       query: (id) => ({
         url: `notes/${id}`,
         method:"GET"
       }),
     }),
+    getAllNotes: builder.query({
+      query: () => 'notes'
+    }),
     updateNotes: builder.mutation({
-      query: (id) => ({
-        url: `notes/${id}`,
-        method:"PATCH"
-      }),
+      query: (id) => {
+        console.log("ID coming:", id);
+        return {
+          url: `notes/${id}`,
+          method: "PATCH",
+        };
+      },
     }),
     deleteNotes: builder.mutation({
       query: (id) => ({
@@ -33,8 +51,9 @@ export const userApi = createApi({
 });
 
 export const {
-  useAddnotesMutation,
-  useGetNotesQuery,
+  useAddNotesMutation,
+  useGetAllNotesQuery,
   useUpdateNotesMutation,
-  useDeleteNotesMutation
+  useDeleteNotesMutation,
+  useGetNotesByIDQuery
 } = userApi;
